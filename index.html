@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f8">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Procedure Log">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Procedure Pay Log v0.7 PWA</title>
+<style>
+:root{
+  --bg:#f7f7f8;--card:#fff;--text:#111827;--muted:#6b7280;
+  --line:#e5e7eb;--soft:#f1f3f5;--accent:#111827;
+  --danger:#b91c1c;--dangerbg:#fef2f2;--radius:18px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{max-width:560px;margin:auto;min-height:100vh;padding:16px 14px 98px}
+.screen{display:none}.screen.active{display:block}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin:3px 0 16px}
+.title{font-size:25px;font-weight:800;letter-spacing:-.5px}
+.sub{font-size:13px;color:var(--muted);margin-top:3px}
+.pill{padding:6px 10px;background:var(--soft);border-radius:999px;font-size:12px;white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+.label{font-size:12px;color:var(--muted)}
+.metric{font-size:27px;font-weight:800;margin-top:6px}
+.section{margin-top:18px}.section h3{font-size:16px;margin:0 0 9px}
+button{border:0;border-radius:14px;min-height:46px;padding:11px 13px;font-size:15px;font-weight:700;cursor:pointer}
+.primary{width:100%;background:var(--accent);color:#fff}
+.secondary{background:var(--soft);color:var(--text)}
+.danger{background:var(--dangerbg);color:var(--danger)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:var(--soft);padding:5px;border-radius:15px}
+.seg button{background:transparent}
+.seg button.active{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.fieldLabel{display:block;font-size:12px;color:var(--muted);margin:14px 0 7px}
+input,select{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px;padding:12px}
+.searchBox{position:relative;margin-bottom:10px}
+.searchBox input{padding-left:38px}
+.searchIcon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px}
+.procGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.procBtn{
+  background:var(--soft);text-align:left;min-height:72px;padding:12px;
+  display:flex;flex-direction:column;justify-content:space-between;gap:6px;
+  border:2px solid transparent;
+}
+.procBtn.active{background:#fff;border-color:var(--accent)}
+.procName{font-size:16px;font-weight:800;line-height:1.2}
+.procMeta{font-size:12px;color:var(--muted);font-weight:600}
+.procBtn.active .procMeta{color:var(--text)}
+.quickStrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px}
+.quickStrip button{white-space:nowrap;min-height:40px;padding:8px 12px;background:var(--soft);font-size:13px}
+.quickStrip button.active{background:var(--accent);color:#fff}
+.stepBox{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;gap:8px}
+.stepBtn{font-size:26px;padding:0;background:var(--soft)}
+.stepValue{height:54px;text-align:center;font-size:23px;font-weight:800;padding:8px}
+.quickAdjust{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:8px}
+.quickAdjust button{background:var(--soft);font-size:13px;padding:7px 4px;min-height:40px}
+.amountWrap{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.amount{font-size:34px;font-weight:850;letter-spacing:-.8px}
+.saveRow{margin-top:15px}
+.history{padding:12px 0;border-bottom:1px solid var(--line)}
+.history:last-child{border-bottom:0}
+.historyTop{display:flex;justify-content:space-between;gap:10px}
+.hmain{font-weight:700}.hsub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.4}
+.hamt{font-weight:800;white-space:nowrap}
+.actions{display:flex;gap:7px;margin-top:8px}
+.actions button{font-size:12px;min-height:36px;padding:7px 10px}
+.summary{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.summary:last-child{border-bottom:0}
+.summary strong{display:block}.summary small{color:var(--muted)}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:18px 6px}
+.nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(560px,100%);display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:7px 7px calc(7px + env(safe-area-inset-bottom));z-index:20}
+.nav button{background:transparent;color:var(--muted);font-size:12px;min-height:45px;padding:5px}
+.nav button.active{color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 3px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-size:12px}.num{text-align:right}
+.priceInput{padding:7px;font-size:14px}
+.manageActions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.manageActions button{min-height:34px;padding:6px 9px;font-size:12px}
+.badgeOff{display:inline-block;background:#f3f4f6;color:#6b7280;border-radius:999px;padding:3px 7px;font-size:11px;margin-left:5px}
+.procBtn.archived{opacity:.45}
+.monthRow{display:flex;gap:8px}.monthRow input{min-width:0}
+.modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.3);display:none;align-items:flex-end;justify-content:center;z-index:100;padding:14px}
+.modalBackdrop.show{display:flex}.modal{width:min(560px,100%);background:#fff;border-radius:22px;padding:18px}
+.modalTitle{font-size:18px;font-weight:800}.modalText{font-size:14px;color:var(--muted);margin:8px 0 16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tiny{font-size:12px;color:var(--muted);line-height:1.5}
+@media(min-width:700px){.modalBackdrop{align-items:center}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="dashboard" class="screen active">
+    <div class="top">
+      <div><div class="title">Procedure Pay Log</div><div class="sub">บันทึกค่าหัตถการแบบเร็ว</div></div>
+      <span class="pill">v0.7 PWA</span>
+    </div>
+
+    <div id="installHint" class="card" style="margin-bottom:10px;display:none">
+      <strong>ติดตั้งบน iPhone</strong>
+      <div class="tiny" style="margin-top:5px">Safari → Share → Add to Home Screen</div>
+    </div>
+
+    <div class="grid">
+      <div class="card"><div class="label">วันนี้</div><div class="metric" id="todayTotal">฿0</div></div>
+      <div class="card"><div class="label">เดือนนี้</div><div class="metric" id="monthTotal">฿0</div></div>
+      <div class="card"><div class="label">ปกส.</div><div class="metric" id="sssTotal">฿0</div></div>
+      <div class="card"><div class="label">ทั่วไป/ประกัน</div><div class="metric" id="privateTotal">฿0</div></div>
+      <div class="card full"><button class="primary" onclick="startNew()">＋ เพิ่มหัตถการ</button></div>
+    </div>
+
+    <div class="section">
+      <h3>สรุปเดือนนี้</h3>
+      <div class="card" id="procedureSummary"></div>
+    </div>
+    <div class="section">
+      <h3>รายการล่าสุด</h3>
+      <div class="card" id="recentList"></div>
+    </div>
+  </section>
+
+  <section id="add" class="screen">
+    <div class="top">
+      <div><div class="title" id="formTitle">Quick Entry</div><div class="sub">เลือกหัตถการให้ง่ายที่สุด</div></div>
+      <span class="pill" id="editBadge" style="display:none">Editing</span>
+    </div>
+
+    <div class="card">
+      <span class="fieldLabel" style="margin-top:0">1. สิทธิ์</span>
+      <div class="seg">
+        <button id="sssBtn" class="active" onclick="setRight('sss')">ปกส.</button>
+        <button id="privateBtn" onclick="setRight('private')">ทั่วไป / ประกัน</button>
+      </div>
+
+      <span class="fieldLabel">2. เลือกหัตถการ</span>
+
+      <div id="recentStripWrap" style="display:none">
+        <div class="label" style="margin-bottom:6px">ใช้ล่าสุด</div>
+        <div id="recentStrip" class="quickStrip"></div>
+      </div>
+
+      <div class="searchBox">
+        <span class="searchIcon">⌕</span>
+        <input id="procedureSearch" placeholder="ค้นหาหัตถการ..." oninput="renderProcedureGrid()">
+      </div>
+
+      <div id="procedureGrid" class="procGrid"></div>
+
+      <span class="fieldLabel">3. จำนวน</span>
+      <div class="stepBox">
+        <button class="stepBtn" onclick="changeQty(-1)">−</button>
+        <input id="qty" class="stepValue" inputmode="numeric" type="number" min="1" value="1" oninput="recalc()">
+        <button class="stepBtn" onclick="changeQty(1)">＋</button>
+      </div>
+      <div class="quickAdjust">
+        <button onclick="setQty(1)">1</button>
+        <button onclick="setQty(2)">2</button>
+        <button onclick="setQty(3)">3</button>
+        <button onclick="changeQty(5)">+5</button>
+      </div>
+
+      <span class="fieldLabel">4. ราคา / ครั้ง</span>
+      <div class="stepBox">
+        <button class="stepBtn" onclick="changePrice(-100)">−</button>
+        <input id="unitPrice" class="stepValue" inputmode="decimal" type="number" min="0" value="0" oninput="recalc()">
+        <button class="stepBtn" onclick="changePrice(100)">＋</button>
+      </div>
+      <div class="quickAdjust">
+        <button onclick="changePrice(-500)">−฿500</button>
+        <button onclick="changePrice(-100)">−฿100</button>
+        <button onclick="changePrice(100)">+฿100</button>
+        <button onclick="changePrice(500)">+฿500</button>
+      </div>
+
+      <div class="amountWrap">
+        <div><div class="label">ยอดรวม</div><div class="amount" id="calcTotal">฿0</div></div>
+        <div class="label" id="priceHint"></div>
+      </div>
+
+      <details style="margin-top:14px">
+        <summary style="font-size:13px;color:var(--muted);cursor:pointer">รายละเอียดเพิ่มเติม</summary>
+        <label class="fieldLabel">วันที่ / เวลา</label>
+        <input id="entryDateTime" type="datetime-local">
+        <label class="fieldLabel">หมายเหตุ</label>
+        <input id="note" placeholder="ไม่จำเป็น">
+      </details>
+
+      <div class="saveRow"><button class="primary" id="saveBtn" onclick="saveEntry()">บันทึกทันที</button></div>
+    </div>
+  </section>
+
+  <section id="history" class="screen">
+    <div class="top"><div><div class="title">History</div><div class="sub">แก้ไขหรือลบย้อนหลัง</div></div></div>
+    <div class="card">
+      <div class="monthRow">
+        <input id="historyMonth" type="month" onchange="renderHistory()">
+        <button class="secondary" onclick="setHistoryThisMonth()">เดือนนี้</button>
+      </div>
+    </div>
+    <div class="section"><div class="card" id="historyList"></div></div>
+  </section>
+
+  <section id="prices" class="screen">
+    <div class="top"><div><div class="title">Prices</div><div class="sub">ราคาตั้งต้นต่อหัตถการ</div></div></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>หัตถการ</th><th class="num">ปกส.</th><th class="num">ทั่วไป</th></tr></thead>
+        <tbody id="priceTable"></tbody>
+      </table>
+      <div style="height:10px"></div>
+      <button class="secondary" style="width:100%" onclick="addProcedure()">＋ เพิ่มหัตถการ</button>
+      <p class="tiny">แตะ “เปลี่ยนชื่อ / ซ่อน / ลบ” ใต้แต่ละหัตถการได้ หากมีประวัติเดิม ระบบจะเก็บ History ไว้และซ่อนจากรายการใหม่แทน</p>
+    </div>
+    <div class="section">
+      <div class="card">
+        <button class="secondary" style="width:100%" onclick="exportCSV()">Export CSV</button>
+        <div style="height:8px"></div>
+        <button class="secondary" style="width:100%" onclick="exportBackup()">Backup ข้อมูล (.json)</button>
+        <div style="height:8px"></div>
+        <button class="secondary" style="width:100%" onclick="document.getElementById('backupInput').click()">Restore Backup</button>
+        <input id="backupInput" type="file" accept="application/json,.json" style="display:none" onchange="importBackup(event)">
+        <p class="tiny">Backup จะเก็บทั้งรายการหัตถการและตารางราคาไว้ในไฟล์เดียว</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="nav">
+  <button data-screen="dashboard" class="active" onclick="go('dashboard')">Dashboard</button>
+  <button data-screen="add" onclick="startNew()">＋ Add</button>
+  <button data-screen="history" onclick="go('history')">History</button>
+  <button data-screen="prices" onclick="go('prices')">Prices</button>
+</nav>
+
+<div id="confirmModal" class="modalBackdrop">
+  <div class="modal">
+    <div class="modalTitle">ลบรายการนี้?</div>
+    <div id="deleteText" class="modalText"></div>
+    <div class="two">
+      <button class="secondary" onclick="closeDeleteModal()">ยกเลิก</button>
+      <button class="danger" onclick="confirmDelete()">ลบ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const K_ENTRIES='proc_entries_v04';
+const K_PRICES='proc_prices_v04';
+const OLD_ENTRIES=['proc_entries_v03','proc_entries_v02','proc_entries'];
+const OLD_PRICES=['proc_prices_v03','proc_prices_v02','proc_prices'];
+
+const defaults={
+  "Suture":{sss:200,private:300},
+  "Foley catheter":{sss:100,private:150},
+  "I&D":{sss:300,private:450},
+  "Intubation":{sss:500,private:700}
+};
+
+function loadFirst(keys){
+  for(const k of keys){
+    const v=localStorage.getItem(k);
+    if(v) try{return JSON.parse(v)}catch(e){}
+  }
+  return null;
+}
+let prices=loadFirst([K_PRICES,...OLD_PRICES])||defaults;
+let entries=loadFirst([K_ENTRIES,...OLD_ENTRIES])||[];
+// v0.6 supports active/inactive state per procedure.
+Object.keys(prices).forEach(name=>{
+  if(typeof prices[name].active==='undefined') prices[name].active=true;
+});
+localStorage.setItem(K_PRICES,JSON.stringify(prices));
+localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+
+let rights='sss';
+let selectedProcedure=Object.keys(prices)[0]||'';
+let editingId=null;
+let pendingDeleteId=null;
+
+function money(n){return '฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:2})}
+function pad(n){return String(n).padStart(2,'0')}
+function toLocalInputValue(date){
+  const d=new Date(date);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function currentMonthValue(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function escJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+
+function go(id){
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.screen===id));
+  if(id==='dashboard')renderDashboard();
+  if(id==='history')renderHistory();
+  if(id==='prices')renderPrices();
+}
+
+function getRecentProcedures(){
+  const seen=new Set(), out=[];
+  for(const e of entries){
+    if(prices[e.procedure] && prices[e.procedure].active!==false && !seen.has(e.procedure)){
+      seen.add(e.procedure); out.push(e.procedure);
+      if(out.length>=4) break;
+    }
+  }
+  return out;
+}
+
+function getFrequentOrder(){
+  const counts={};
+  entries.forEach(e=>counts[e.procedure]=(counts[e.procedure]||0)+e.qty);
+  return Object.keys(prices)
+    .filter(name=>prices[name].active!==false)
+    .sort((a,b)=>(counts[b]||0)-(counts[a]||0));
+}
+
+function renderRecentStrip(){
+  const recent=getRecentProcedures();
+  const wrap=document.getElementById('recentStripWrap');
+  const el=document.getElementById('recentStrip');
+  if(!recent.length){wrap.style.display='none';return}
+  wrap.style.display='block';
+  el.innerHTML=recent.map(name=>`
+    <button class="${name===selectedProcedure?'active':''}" onclick="selectProcedure('${escJs(name)}')">${esc(name)}</button>
+  `).join('');
+}
+
+function renderProcedureGrid(){
+  const q=(document.getElementById('procedureSearch')?.value||'').trim().toLowerCase();
+  const names=getFrequentOrder().filter(name=>name.toLowerCase().includes(q));
+  const el=document.getElementById('procedureGrid');
+  el.innerHTML=names.length?names.map(name=>{
+    const p=prices[name]||{sss:0,private:0};
+    const current=rights==='sss'?p.sss:p.private;
+    return `<button class="procBtn ${name===selectedProcedure?'active':''}" onclick="selectProcedure('${escJs(name)}')">
+      <span class="procName">${esc(name)}</span>
+      <span class="procMeta">${rights==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${money(current)}</span>
+    </button>`;
+  }).join(''):'<div class="empty" style="grid-column:1/-1">ไม่พบหัตถการ</div>';
+  renderRecentStrip();
+}
+
+function selectProcedure(name, resetPrice=true){
+  selectedProcedure=name;
+  if(resetPrice){
+    document.getElementById('unitPrice').value=(prices[name]&&prices[name][rights])||0;
+  }
+  recalc();
+  renderProcedureGrid();
+}
+
+function setRight(r, resetPrice=true){
+  rights=r;
+  document.getElementById('sssBtn').classList.toggle('active',r==='sss');
+  document.getElementById('privateBtn').classList.toggle('active',r==='private');
+  if(resetPrice && selectedProcedure){
+    document.getElementById('unitPrice').value=(prices[selectedProcedure]&&prices[selectedProcedure][rights])||0;
+  }
+  recalc();
+  renderProcedureGrid();
+}
+
+function changeQty(delta){
+  const el=document.getElementById('qty');
+  el.value=Math.max(1,Math.round(Number(el.value||1)+delta));
+  recalc();
+}
+function setQty(n){
+  document.getElementById('qty').value=Math.max(1,n);
+  recalc();
+}
+function changePrice(delta){
+  const el=document.getElementById('unitPrice');
+  el.value=Math.max(0,Number(el.value||0)+delta);
+  recalc();
+}
+function recalc(){
+  const qty=Math.max(1,Number(document.getElementById('qty').value||1));
+  const unit=Math.max(0,Number(document.getElementById('unitPrice').value||0));
+  document.getElementById('calcTotal').textContent=money(qty*unit);
+  document.getElementById('priceHint').textContent=`${qty} × ${money(unit)}`;
+}
+
+function startNew(){
+  editingId=null;
+  document.getElementById('formTitle').textContent='Quick Entry';
+  document.getElementById('editBadge').style.display='none';
+  document.getElementById('saveBtn').textContent='บันทึกทันที';
+  document.getElementById('entryDateTime').value=toLocalInputValue(new Date());
+  document.getElementById('note').value='';
+  document.getElementById('qty').value=1;
+  document.getElementById('procedureSearch').value='';
+  rights='sss';
+  const recent=getRecentProcedures();
+  selectedProcedure=recent[0] || getFrequentOrder()[0] || Object.keys(prices)[0] || '';
+  setRight('sss',false);
+  if(selectedProcedure) document.getElementById('unitPrice').value=prices[selectedProcedure][rights]||0;
+  recalc();
+  renderProcedureGrid();
+  go('add');
+}
+
+function saveEntry(){
+  if(!selectedProcedure)return;
+  const qty=Math.max(1,Number(document.getElementById('qty').value||1));
+  const unit=Math.max(0,Number(document.getElementById('unitPrice').value||0));
+  const raw=document.getElementById('entryDateTime').value;
+  const dt=raw?new Date(raw):new Date();
+  const obj={
+    id:editingId||Date.now(),
+    ts:dt.toISOString(),
+    procedure:selectedProcedure,
+    right:rights,
+    qty,unit,total:qty*unit,
+    note:document.getElementById('note').value.trim()
+  };
+  if(editingId){
+    const i=entries.findIndex(e=>e.id===editingId);
+    if(i>=0)entries[i]=obj;
+  }else entries.push(obj);
+  entries.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+  editingId=null;
+  go('dashboard');
+}
+
+function editEntry(id){
+  const e=entries.find(x=>x.id===id); if(!e)return;
+  editingId=id; rights=e.right; selectedProcedure=e.procedure;
+  document.getElementById('formTitle').textContent='แก้ไขรายการ';
+  document.getElementById('editBadge').style.display='inline-block';
+  document.getElementById('saveBtn').textContent='บันทึกการแก้ไข';
+  document.getElementById('entryDateTime').value=toLocalInputValue(e.ts);
+  document.getElementById('note').value=e.note||'';
+  document.getElementById('qty').value=e.qty;
+  document.getElementById('unitPrice').value=e.unit;
+  document.getElementById('procedureSearch').value='';
+  setRight(e.right,false);
+  renderProcedureGrid();
+  recalc();
+  go('add');
+}
+
+function askDelete(id){
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  pendingDeleteId=id;
+  document.getElementById('deleteText').textContent=`${e.procedure} · ${e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${money(e.total)}`;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function closeDeleteModal(){pendingDeleteId=null;document.getElementById('confirmModal').classList.remove('show')}
+function confirmDelete(){
+  if(pendingDeleteId==null)return;
+  entries=entries.filter(e=>e.id!==pendingDeleteId);
+  localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+  closeDeleteModal();renderDashboard();renderHistory();
+}
+document.getElementById('confirmModal').addEventListener('click',e=>{if(e.target.id==='confirmModal')closeDeleteModal()});
+
+function entryHtml(e){
+  const d=new Date(e.ts);
+  return `<div class="history">
+    <div class="historyTop">
+      <div><div class="hmain">${esc(e.procedure)} × ${e.qty}</div>
+      <div class="hsub">${e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}${e.note?' · '+esc(e.note):''}</div></div>
+      <div class="hamt">${money(e.total)}</div>
+    </div>
+    <div class="actions"><button class="secondary" onclick="editEntry(${e.id})">แก้ไข</button><button class="danger" onclick="askDelete(${e.id})">ลบ</button></div>
+  </div>`;
+}
+
+function renderDashboard(){
+  const now=new Date(), todayKey=now.toDateString(), m=now.getMonth(), y=now.getFullYear();
+  const today=entries.filter(e=>new Date(e.ts).toDateString()===todayKey);
+  const month=entries.filter(e=>{const d=new Date(e.ts);return d.getMonth()===m&&d.getFullYear()===y});
+  document.getElementById('todayTotal').textContent=money(today.reduce((s,e)=>s+e.total,0));
+  document.getElementById('monthTotal').textContent=money(month.reduce((s,e)=>s+e.total,0));
+  document.getElementById('sssTotal').textContent=money(month.filter(e=>e.right==='sss').reduce((s,e)=>s+e.total,0));
+  document.getElementById('privateTotal').textContent=money(month.filter(e=>e.right==='private').reduce((s,e)=>s+e.total,0));
+
+  const sum={};
+  month.forEach(e=>{if(!sum[e.procedure])sum[e.procedure]={n:0,total:0};sum[e.procedure].n+=e.qty;sum[e.procedure].total+=e.total});
+  const arr=Object.entries(sum).sort((a,b)=>b[1].total-a[1].total);
+  document.getElementById('procedureSummary').innerHTML=arr.length?arr.map(([name,v])=>`
+    <div class="summary"><div><strong>${esc(name)}</strong><small>${v.n} ครั้ง</small></div><strong>${money(v.total)}</strong></div>`).join(''):'<div class="empty">ยังไม่มีข้อมูลเดือนนี้</div>';
+  document.getElementById('recentList').innerHTML=entries.length?entries.slice(0,5).map(entryHtml).join(''):'<div class="empty">ยังไม่มีข้อมูล</div>';
+}
+
+function renderHistory(){
+  const val=document.getElementById('historyMonth').value||currentMonthValue();
+  document.getElementById('historyMonth').value=val;
+  const [y,m]=val.split('-').map(Number);
+  const rows=entries.filter(e=>{const d=new Date(e.ts);return d.getFullYear()===y&&d.getMonth()+1===m});
+  document.getElementById('historyList').innerHTML=rows.length?rows.map(entryHtml).join(''):'<div class="empty">ไม่มีรายการเดือนนี้</div>';
+}
+function setHistoryThisMonth(){document.getElementById('historyMonth').value=currentMonthValue();renderHistory()}
+
+function renderPrices(){
+  document.getElementById('priceTable').innerHTML=Object.entries(prices).map(([name,p])=>`
+    <tr>
+      <td>
+        <div><strong>${esc(name)}</strong>${p.active===false?'<span class="badgeOff">ซ่อนอยู่</span>':''}</div>
+        <div class="manageActions">
+          <button class="secondary" onclick="renameProcedure('${escJs(name)}')">เปลี่ยนชื่อ</button>
+          <button class="secondary" onclick="toggleProcedure('${escJs(name)}')">${p.active===false?'เปิดใช้':'ซ่อน'}</button>
+          <button class="danger" onclick="deleteProcedure('${escJs(name)}')">ลบ</button>
+        </div>
+      </td>
+      <td class="num"><input class="priceInput" type="number" min="0" value="${p.sss}" onchange="updatePrice('${escJs(name)}','sss',this.value)"></td>
+      <td class="num"><input class="priceInput" type="number" min="0" value="${p.private}" onchange="updatePrice('${escJs(name)}','private',this.value)"></td>
+    </tr>
+  `).join('');
+}
+function updatePrice(name,right,val){
+  prices[name][right]=Math.max(0,Number(val||0));
+  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  renderProcedureGrid();
+}
+function addProcedure(){
+  const name=prompt('ชื่อหัตถการ');
+  if(!name)return;
+  const t=name.trim();
+  if(!t||prices[t])return;
+  prices[t]={sss:0,private:0,active:true};
+  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  renderPrices();renderProcedureGrid();
+}
+
+
+function renameProcedure(oldName){
+  const current=prices[oldName];
+  if(!current)return;
+  const newName=prompt('ชื่อใหม่ของหัตถการ',oldName);
+  if(!newName)return;
+  const t=newName.trim();
+  if(!t || t===oldName)return;
+  if(prices[t]){
+    alert('มีหัตถการชื่อนี้อยู่แล้ว');
+    return;
+  }
+
+  const updateHistory=confirm('ต้องการเปลี่ยนชื่อใน History เดิมด้วยหรือไม่?\n\nOK = เปลี่ยนชื่อทั้งรายการใหม่และ History เดิม\nCancel = เปลี่ยนเฉพาะชื่อสำหรับรายการใหม่');
+  prices[t]={...current};
+  delete prices[oldName];
+
+  if(updateHistory){
+    entries=entries.map(e=>e.procedure===oldName?{...e,procedure:t}:e);
+    localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+  }
+
+  if(selectedProcedure===oldName) selectedProcedure=t;
+  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  renderPrices();renderProcedureGrid();renderDashboard();renderHistory();
+}
+
+function toggleProcedure(name){
+  if(!prices[name])return;
+  prices[name].active = prices[name].active===false ? true : false;
+  if(selectedProcedure===name && prices[name].active===false){
+    selectedProcedure=getFrequentOrder()[0]||'';
+    if(selectedProcedure){
+      document.getElementById('unitPrice').value=prices[selectedProcedure][rights]||0;
+    }
+  }
+  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  renderPrices();renderProcedureGrid();
+}
+
+function deleteProcedure(name){
+  if(!prices[name])return;
+  const used=entries.some(e=>e.procedure===name);
+  if(used){
+    const ok=confirm(`"${name}" มีประวัติอยู่แล้ว\n\nเพื่อไม่ให้ History หาย ระบบจะซ่อนหัตถการนี้จากรายการใหม่แทน\n\nกด OK เพื่อซ่อน`);
+    if(ok){
+      prices[name].active=false;
+      localStorage.setItem(K_PRICES,JSON.stringify(prices));
+      renderPrices();renderProcedureGrid();
+    }
+    return;
+  }
+
+  const ok=confirm(`ลบ "${name}" ออกจากรายการหัตถการ?\n\nรายการนี้ยังไม่เคยถูกใช้ จึงลบได้ถาวร`);
+  if(!ok)return;
+  delete prices[name];
+
+  if(selectedProcedure===name){
+    selectedProcedure=getFrequentOrder()[0]||Object.keys(prices).find(n=>prices[n].active!==false)||'';
+    if(selectedProcedure){
+      document.getElementById('unitPrice').value=prices[selectedProcedure][rights]||0;
+    }
+  }
+
+  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  renderPrices();renderProcedureGrid();
+}
+
+function exportCSV(){
+  const header=['วันที่เวลา','สิทธิ์','หัตถการ','จำนวน','ราคาต่อครั้ง','รวม','หมายเหตุ'];
+  const rows=entries.slice().sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(e=>[
+    new Date(e.ts).toLocaleString('th-TH'),e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน',e.procedure,e.qty,e.unit,e.total,e.note||''
+  ]);
+  const q=v=>`"${String(v).replace(/"/g,'""')}"`;
+  const csv='\uFEFF'+[header,...rows].map(r=>r.map(q).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`procedure-pay-log-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+document.getElementById('historyMonth').value=currentMonthValue();
+document.getElementById('entryDateTime').value=toLocalInputValue(new Date());
+renderProcedureGrid();
+if(selectedProcedure)document.getElementById('unitPrice').value=prices[selectedProcedure][rights]||0;
+recalc();renderDashboard();
+
+function exportBackup(){
+  const payload={
+    app:'Procedure Pay Log',
+    version:'0.7',
+    exportedAt:new Date().toISOString(),
+    entries,
+    prices
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`procedure-pay-log-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+function importBackup(event){
+  const file=event.target.files && event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!Array.isArray(data.entries) || !data.prices || typeof data.prices!=='object') throw new Error('bad');
+      entries=data.entries;
+      prices=data.prices;
+      localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+      localStorage.setItem(K_PRICES,JSON.stringify(prices));
+      renderDashboard();renderPrices();renderProcedureGrid();
+      alert('Restore สำเร็จ');
+    }catch(e){
+      alert('ไฟล์ Backup ไม่ถูกต้อง');
+    }finally{
+      event.target.value='';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function showInstallHint(){
+  const hint=document.getElementById('installHint');
+  const isiOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone=window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  if(isiOS && !standalone) hint.style.display='block';
+}
+showInstallHint();
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+}
+
+</script>
+</body>
+</html>
