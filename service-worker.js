@@ -1,11 +1,13 @@
-const CACHE='procedure-pay-log-v07';
-const ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='procedure-pay-log-v10';
+const ASSETS=['./','./index.html','./config.js','./data.js','./cloud.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('procedure-pay-log-')&&k!==CACHE).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',e=>{
-  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{
-    const copy=resp.clone();
-    caches.open(CACHE).then(c=>c.put(e.request,copy));
-    return resp;
-  }).catch(()=>caches.match('./index.html'))));
+ const url=new URL(e.request.url);
+ // Never cache auth, Supabase requests, external resources, or non-GET writes.
+ if(e.request.method!=='GET'||url.origin!==self.location.origin||!ASSETS.some(p=>new URL(p,self.location).pathname===url.pathname))return;
+ e.respondWith(fetch(e.request).then(resp=>{
+   if(resp.ok){const copy=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));}
+   return resp;
+ }).catch(()=>caches.match(e.request)));
 });

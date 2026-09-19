@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Procedure Log">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Procedure Pay Log v0.7 PWA</title>
+<title>Procedure Pay Log v1.0</title>
 <style>
 :root{
   --bg:#f7f7f8;--card:#fff;--text:#111827;--muted:#6b7280;
@@ -99,7 +99,7 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
   <section id="dashboard" class="screen active">
     <div class="top">
       <div><div class="title">Procedure Pay Log</div><div class="sub">บันทึกค่าหัตถการแบบเร็ว</div></div>
-      <span class="pill">v0.7 PWA</span>
+      <span class="pill">v1.0</span>
     </div>
 
     <div id="installHint" class="card" style="margin-bottom:10px;display:none">
@@ -207,6 +207,20 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
   </section>
 
   <section id="prices" class="screen">
+    <div class="card" style="margin-bottom:16px">
+      <strong>บัญชีและ Cloud</strong><p id="cloudStatus" class="tiny" role="status" aria-live="polite">โหมดในเครื่อง</p>
+      <form id="cloudLogin" onsubmit="loginCloud(event)">
+        <label class="fieldLabel" for="cloudEmail">อีเมล</label><input id="cloudEmail" type="email" autocomplete="username" required>
+        <label class="fieldLabel" for="cloudPassword">รหัสผ่าน</label><input id="cloudPassword" type="password" autocomplete="current-password" required>
+        <button class="secondary" style="margin-top:8px">เข้าสู่ระบบ</button>
+      </form>
+      <div id="cloudActions" hidden>
+        <button class="secondary" onclick="syncCloud()">ซิงก์</button>
+        <button class="secondary" onclick="refreshCloud()">โหลดจาก Cloud</button>
+        <button class="secondary" onclick="migrateLocal()">นำเข้าข้อมูลเดิมจากเครื่อง</button>
+        <button class="secondary" onclick="logoutCloud()">ออกจากระบบ</button>
+      </div>
+    </div>
     <div class="top"><div><div class="title">Prices</div><div class="sub">ราคาตั้งต้นต่อหัตถการ</div></div></div>
     <div class="card">
       <table>
@@ -249,6 +263,8 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
   </div>
 </div>
 
+<script src="config.js"></script>
+<script src="data.js"></script>
 <script>
 const K_ENTRIES='proc_entries_v04';
 const K_PRICES='proc_prices_v04';
@@ -291,7 +307,7 @@ function toLocalInputValue(date){
 }
 function currentMonthValue(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function escJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+function escJs(s){return esc(JSON.stringify(String(s)).slice(1,-1).replace(/'/g, '\\u0027'))}
 
 function go(id){
   document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
@@ -408,13 +424,14 @@ function startNew(){
 }
 
 function saveEntry(){
-  if(!selectedProcedure)return;
+  if(!selectedProcedure || document.getElementById('saveBtn').disabled)return;
   const qty=Math.max(1,Number(document.getElementById('qty').value||1));
   const unit=Math.max(0,Number(document.getElementById('unitPrice').value||0));
   const raw=document.getElementById('entryDateTime').value;
   const dt=raw?new Date(raw):new Date();
+  if(!Number.isInteger(qty)||qty<1||qty>1000000||!Number.isFinite(unit)||unit<0||unit>=1e10||Math.abs(unit*100-Math.round(unit*100))>0.0001||!Number.isFinite(dt.getTime())){alert("กรุณาตรวจจำนวน ราคา และวันที่");return;}
   const obj={
-    id:editingId||Date.now(),
+    id:editingId||crypto.randomUUID(),
     ts:dt.toISOString(),
     procedure:selectedProcedure,
     right:rights,
@@ -422,17 +439,19 @@ function saveEntry(){
     note:document.getElementById('note').value.trim()
   };
   if(editingId){
-    const i=entries.findIndex(e=>e.id===editingId);
+    const i=entries.findIndex(e=>String(e.id)===String(editingId));
     if(i>=0)entries[i]=obj;
   }else entries.push(obj);
   entries.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
-  localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+  persistData();
   editingId=null;
+  document.getElementById('saveBtn').disabled=true;
+  setTimeout(()=>document.getElementById('saveBtn').disabled=false,500);
   go('dashboard');
 }
 
 function editEntry(id){
-  const e=entries.find(x=>x.id===id); if(!e)return;
+  const e=entries.find(x=>String(x.id)===String(id)); if(!e)return;
   editingId=id; rights=e.right; selectedProcedure=e.procedure;
   document.getElementById('formTitle').textContent='แก้ไขรายการ';
   document.getElementById('editBadge').style.display='inline-block';
@@ -449,7 +468,7 @@ function editEntry(id){
 }
 
 function askDelete(id){
-  const e=entries.find(x=>x.id===id);if(!e)return;
+  const e=entries.find(x=>String(x.id)===String(id));if(!e)return;
   pendingDeleteId=id;
   document.getElementById('deleteText').textContent=`${e.procedure} · ${e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${money(e.total)}`;
   document.getElementById('confirmModal').classList.add('show');
@@ -457,8 +476,8 @@ function askDelete(id){
 function closeDeleteModal(){pendingDeleteId=null;document.getElementById('confirmModal').classList.remove('show')}
 function confirmDelete(){
   if(pendingDeleteId==null)return;
-  entries=entries.filter(e=>e.id!==pendingDeleteId);
-  localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+  entries=entries.filter(e=>String(e.id)!==String(pendingDeleteId));
+  persistData();
   closeDeleteModal();renderDashboard();renderHistory();
 }
 document.getElementById('confirmModal').addEventListener('click',e=>{if(e.target.id==='confirmModal')closeDeleteModal()});
@@ -471,7 +490,7 @@ function entryHtml(e){
       <div class="hsub">${e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}${e.note?' · '+esc(e.note):''}</div></div>
       <div class="hamt">${money(e.total)}</div>
     </div>
-    <div class="actions"><button class="secondary" onclick="editEntry(${e.id})">แก้ไข</button><button class="danger" onclick="askDelete(${e.id})">ลบ</button></div>
+    <div class="actions"><button class="secondary" onclick="editEntry('${escJs(String(e.id))}')">แก้ไข</button><button class="danger" onclick="askDelete('${escJs(String(e.id))}')">ลบ</button></div>
   </div>`;
 }
 
@@ -518,8 +537,10 @@ function renderPrices(){
   `).join('');
 }
 function updatePrice(name,right,val){
-  prices[name][right]=Math.max(0,Number(val||0));
-  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  const next=Number(val);
+  if(!Number.isFinite(next)||next<0||next>=1e10||Math.abs(next*100-Math.round(next*100))>0.0001){alert('ราคาไม่ถูกต้อง');renderPrices();return;}
+  prices[name][right]=next;
+  persistData();
   renderProcedureGrid();
 }
 function addProcedure(){
@@ -528,7 +549,7 @@ function addProcedure(){
   const t=name.trim();
   if(!t||prices[t])return;
   prices[t]={sss:0,private:0,active:true};
-  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  persistData();
   renderPrices();renderProcedureGrid();
 }
 
@@ -551,11 +572,11 @@ function renameProcedure(oldName){
 
   if(updateHistory){
     entries=entries.map(e=>e.procedure===oldName?{...e,procedure:t}:e);
-    localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
+    persistData();
   }
 
   if(selectedProcedure===oldName) selectedProcedure=t;
-  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  persistData();
   renderPrices();renderProcedureGrid();renderDashboard();renderHistory();
 }
 
@@ -568,7 +589,7 @@ function toggleProcedure(name){
       document.getElementById('unitPrice').value=prices[selectedProcedure][rights]||0;
     }
   }
-  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  persistData();
   renderPrices();renderProcedureGrid();
 }
 
@@ -579,7 +600,7 @@ function deleteProcedure(name){
     const ok=confirm(`"${name}" มีประวัติอยู่แล้ว\n\nเพื่อไม่ให้ History หาย ระบบจะซ่อนหัตถการนี้จากรายการใหม่แทน\n\nกด OK เพื่อซ่อน`);
     if(ok){
       prices[name].active=false;
-      localStorage.setItem(K_PRICES,JSON.stringify(prices));
+      persistData();
       renderPrices();renderProcedureGrid();
     }
     return;
@@ -596,7 +617,7 @@ function deleteProcedure(name){
     }
   }
 
-  localStorage.setItem(K_PRICES,JSON.stringify(prices));
+  persistData();
   renderPrices();renderProcedureGrid();
 }
 
@@ -622,7 +643,7 @@ recalc();renderDashboard();
 function exportBackup(){
   const payload={
     app:'Procedure Pay Log',
-    version:'0.7',
+    version:'1.0',
     exportedAt:new Date().toISOString(),
     entries,
     prices
@@ -638,15 +659,19 @@ function exportBackup(){
 function importBackup(event){
   const file=event.target.files && event.target.files[0];
   if(!file)return;
+  const restoreAccount=account;
   const reader=new FileReader();
   reader.onload=()=>{
+    if(busy || account!==restoreAccount){alert('บัญชีเปลี่ยนแล้ว กรุณาเลือกไฟล์ใหม่');return;}
     try{
       const data=JSON.parse(reader.result);
       if(!Array.isArray(data.entries) || !data.prices || typeof data.prices!=='object') throw new Error('bad');
-      entries=data.entries;
-      prices=data.prices;
-      localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
-      localStorage.setItem(K_PRICES,JSON.stringify(prices));
+      const checked=PayLogData.validate(data);
+      if(!confirm("Restore จะแทนข้อมูลปัจจุบัน ต้องการดำเนินการ?"))return;
+      entries=checked.entries;
+      prices=checked.prices;
+      persistData();
+      persistData();
       renderDashboard();renderPrices();renderProcedureGrid();
       alert('Restore สำเร็จ');
     }catch(e){
@@ -670,6 +695,12 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
 }
 
+</script>
+<script src="cloud.js"></script>
+<script>
+for(const name of ['saveEntry','confirmDelete','updatePrice','addProcedure','renameProcedure','toggleProcedure','deleteProcedure','importBackup']){
+ const original=window[name];window[name]=function(...args){if(busy){alert('กำลังโหลดข้อมูล กรุณารอสักครู่');return;}const before={entries:structuredClone(entries),prices:structuredClone(prices),cloudState:structuredClone(cloudState)};try{return original.apply(this,args);}catch(e){entries=before.entries;prices=before.prices;cloudState=before.cloudState;renderDashboard();renderPrices();renderProcedureGrid();alert('บันทึกไม่สำเร็จ: '+e.message);}};
+}
 </script>
 </body>
 </html>
