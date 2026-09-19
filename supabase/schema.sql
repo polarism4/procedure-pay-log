@@ -9,20 +9,20 @@ create table public.app_settings (
 create table public.procedure_types (
  user_id uuid not null references auth.users(id) on delete cascade,
  name text not null check(length(trim(name)) between 1 and 200),
- sss numeric(12,2) not null check(sss >= 0),
- private numeric(12,2) not null check(private >= 0),
+ sss numeric(12,2) not null check(sss >= 0 and sss < 10000000000),
+ private numeric(12,2) not null check(private >= 0 and private < 10000000000),
  active boolean not null default true,
  primary key(user_id,name)
 );
 -- Names/prices are historical snapshots: catalog renames must not rewrite history.
 create table public.procedure_entries (
  user_id uuid not null references auth.users(id) on delete cascade,
- id text not null,
+ id text not null check(id ~ '^[A-Za-z0-9_-]{1,100}$'),
  ts timestamptz not null,
  procedure text not null check(length(trim(procedure)) between 1 and 200),
  "right" text not null check("right" in ('sss','private')),
  qty integer not null check(qty between 1 and 1000000),
- unit numeric(12,2) not null check(unit >= 0),
+ unit numeric(12,2) not null check(unit >= 0 and unit < 10000000000),
  total numeric generated always as (qty * unit) stored,
  note text not null default '' check(length(note)<=5000),
  primary key(user_id,id)

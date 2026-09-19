@@ -45,10 +45,7 @@ async function refreshCloud(){
   busy=true;
   try{
     const {data,error}=await cloud.rpc('load_pay_log');if(error)throw error;
-    // Never discard edits made while the network request was in flight.
-    if(cloudState.dirty) {
-      localStorage.setItem(cacheKey()+'_before_reload',JSON.stringify(cloudState));
-    }
+    if(cloudState.dirty) localStorage.setItem(cacheKey()+'_before_reload',JSON.stringify(cloudState));
     cloudState={...PayLogData.validate(data),revision:Number(data.revision),dirty:false};
     localStorage.setItem(cacheKey(),JSON.stringify(cloudState));applyData(cloudState);cloudStatus('โหลด Cloud แล้ว');
   }catch(e){cloudStatus('โหลดไม่สำเร็จ · '+e.message);}finally{busy=false;}
@@ -61,14 +58,22 @@ async function loginCloud(event){
     const {data,error}=await cloud.auth.signInWithPassword({email:document.getElementById('cloudEmail').value,password:document.getElementById('cloudPassword').value});
     document.getElementById('cloudPassword').value='';if(error)throw error;
     const owner=data.user.id;
-    const cached=localStorage.getItem(`proc_cloud_v1_${owner}`);
+    const cachedRaw=localStorage.getItem(`proc_cloud_v1_${owner}`);
     let next;
-    if(cached){next=JSON.parse(cached);PayLogData.validate(next);}
-    else {const result=await cloud.rpc('load_pay_log');if(result.error)throw result.error;next={...PayLogData.validate(result.data),revision:Number(result.data.revision),dirty:false};}
+    if(cachedRaw){
+      const cached=JSON.parse(cachedRaw);PayLogData.validate(cached);
+      if(cached.dirty) next=cached;
+    }
+    if(!next){
+      const result=await cloud.rpc('load_pay_log');if(result.error)throw result.error;
+      next={...PayLogData.validate(result.data),revision:Number(result.data.revision),dirty:false};
+      localStorage.setItem(`proc_cloud_v1_${owner}`,JSON.stringify(next));
+    }
     account=owner;cloudState=next;applyData(next);
     document.getElementById('cloudActions').hidden=false;
     document.getElementById('cloudLogin').hidden=true;
     cloudStatus(next.dirty?'มีข้อมูลในเครื่องรอซิงก์':'เข้าสู่ระบบแล้ว · '+data.user.email);
+    if(next.dirty)queueMicrotask(syncCloud);
   }catch(e){cloudStatus('เข้าสู่ระบบไม่สำเร็จ · '+e.message);}finally{busy=false;}
 }
 async function logoutCloud(){
@@ -82,13 +87,21 @@ async function logoutCloud(){
     document.getElementById('cloudActions').hidden=true;document.getElementById('cloudLogin').hidden=false;cloudStatus('ใช้ข้อมูลในเครื่อง');
   }catch(e){cloudStatus(e.message);}finally{busy=false;}
 }
+function downloadMigrationBackup(data){
+  const payload={app:'Procedure Pay Log',version:'1.0',exportedAt:new Date().toISOString(),purpose:'pre-cloud-migration',entries:data.entries,prices:data.prices};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`procedure-pay-log-pre-cloud-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
 function migrateLocal(){
   if(!account||busy||syncing)return;
   if(cloudState.revision!==0 || entries.length || Object.keys(prices).length){cloudStatus('นำเข้าได้เฉพาะบัญชี Cloud ว่าง เพื่อป้องกันข้อมูลซ้ำหรือเขียนทับ');return;}
   try{
     const data=PayLogData.validate({entries:loadFirst([K_ENTRIES,...OLD_ENTRIES])||[],prices:loadFirst([K_PRICES,...OLD_PRICES])||defaults});
-    if(!confirm(`นำเข้า ${data.entries.length} รายการ จากเครื่องนี้เข้าบัญชีที่เข้าสู่ระบบ?`))return;
+    if(!confirm(`นำเข้า ${data.entries.length} รายการ จากเครื่องนี้เข้าบัญชีที่เข้าสู่ระบบ?\nระบบจะดาวน์โหลด Backup ก่อนนำเข้า`))return;
     localStorage.setItem('proc_pre_cloud_backup_v1',JSON.stringify(data));
+    downloadMigrationBackup(data);
     applyData(data);persistData();
   }catch(e){cloudStatus(e.message);}
 }

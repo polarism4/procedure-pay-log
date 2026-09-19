@@ -12,4 +12,4 @@ if(publishableKey.startsWith('eyJ')){
 fs.mkdirSync(path.join(__dirname,'dist'),{recursive:true});
 for(const file of ['index.html','data.js','cloud.js','manifest.json','service-worker.js','icon-192.png','icon-512.png'])fs.copyFileSync(path.join(__dirname,file),path.join(__dirname,'dist',file));
 fs.writeFileSync(path.join(__dirname,'dist/config.js'),'window.PAY_LOG_CONFIG = '+JSON.stringify({url,publishableKey})+';\n');
-fs.writeFileSync(path.join(__dirname,'dist/_headers'),'/service-worker.js\n  Cache-Control: no-cache\n/config.js\n  Cache-Control: no-cache\n/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n');
+fs.writeFileSync(path.join(__dirname,'dist/_headers'),'/service-worker.js\n  Cache-Control: no-cache\n/config.js\n  Cache-Control: no-cache\n/*\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: DENY\n  Referrer-Policy: no-referrer\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n');
