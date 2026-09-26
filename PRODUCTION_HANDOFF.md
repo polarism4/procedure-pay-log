@@ -1,4 +1,4 @@
-# Procedure Pay Log v1.0 — production handoff
+# Procedure Pay Log v1.1 — production handoff
 
 ## Cloudflare Workers Static Assets
 
@@ -42,6 +42,8 @@ The recreated regression suite covers legacy IDs/timestamps, both coverage types
 
 ## Notes
 
-Sessions remain memory-only by design. Pending account data remains in an account-specific localStorage cache and retries after the next successful sign-in.
+Sessions persist in browser local storage, refresh automatically and restore the last signed-in account when the app reopens. Explicit sign-out removes the saved session. Pending account data remains in an account-specific localStorage cache and retries automatically after session restoration.
+
+The application retains full DF and derives actual payment per entry: `sss` = 50%, `private` = 80%. Legacy entries are normalized with these rates; dashboard/history/CSV show both values. No database migration is required because actual payment is deterministically reconstructed from the stored coverage and full DF.
 
 The service worker is network-first for the app shell only, does not intercept Supabase/auth/external requests, calls `skipWaiting()` and `clients.claim()`, and deletes older `procedure-pay-log-*` caches on activation.

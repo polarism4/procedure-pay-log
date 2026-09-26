@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Procedure Log">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Procedure Pay Log v1.0</title>
+<title>Procedure Pay Log v1.1</title>
 <style>
 :root{
   --bg:#f7f7f8;--card:#fff;--text:#111827;--muted:#6b7280;
@@ -29,6 +29,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,B
 .full{grid-column:1/-1}
 .label{font-size:12px;color:var(--muted)}
 .metric{font-size:27px;font-weight:800;margin-top:6px}
+.metricGross{font-size:11px;color:var(--muted);margin-top:3px}
 .section{margin-top:18px}.section h3{font-size:16px;margin:0 0 9px}
 button{border:0;border-radius:14px;min-height:46px;padding:11px 13px;font-size:15px;font-weight:700;cursor:pointer}
 .primary{width:100%;background:var(--accent);color:#fff}
@@ -67,7 +68,7 @@ input,select{width:100%;border:1px solid var(--line);border-radius:12px;backgrou
 .history:last-child{border-bottom:0}
 .historyTop{display:flex;justify-content:space-between;gap:10px}
 .hmain{font-weight:700}.hsub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.4}
-.hamt{font-weight:800;white-space:nowrap}
+.hamt{font-weight:800;white-space:nowrap;text-align:right}.hamt small{display:block;color:var(--muted);font-weight:500;margin-top:3px}
 .actions{display:flex;gap:7px;margin-top:8px}
 .actions button{font-size:12px;min-height:36px;padding:7px 10px}
 .summary{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -99,7 +100,7 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
   <section id="dashboard" class="screen active">
     <div class="top">
       <div><div class="title">Procedure Pay Log</div><div class="sub">บันทึกค่าหัตถการแบบเร็ว</div></div>
-      <span class="pill">v1.0</span>
+      <span class="pill">v1.1</span>
     </div>
 
     <div id="installHint" class="card" style="margin-bottom:10px;display:none">
@@ -108,10 +109,10 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
     </div>
 
     <div class="grid">
-      <div class="card"><div class="label">วันนี้</div><div class="metric" id="todayTotal">฿0</div></div>
-      <div class="card"><div class="label">เดือนนี้</div><div class="metric" id="monthTotal">฿0</div></div>
-      <div class="card"><div class="label">ปกส.</div><div class="metric" id="sssTotal">฿0</div></div>
-      <div class="card"><div class="label">ทั่วไป/ประกัน</div><div class="metric" id="privateTotal">฿0</div></div>
+      <div class="card"><div class="label">รับจริงวันนี้</div><div class="metric" id="todayTotal">฿0</div><div class="metricGross" id="todayGross">DF เต็ม ฿0</div></div>
+      <div class="card"><div class="label">รับจริงเดือนนี้</div><div class="metric" id="monthTotal">฿0</div><div class="metricGross" id="monthGross">DF เต็ม ฿0</div></div>
+      <div class="card"><div class="label">ปกส. · รับ 50%</div><div class="metric" id="sssTotal">฿0</div><div class="metricGross" id="sssGross">DF เต็ม ฿0</div></div>
+      <div class="card"><div class="label">ทั่วไป/ประกัน · รับ 80%</div><div class="metric" id="privateTotal">฿0</div><div class="metricGross" id="privateGross">DF เต็ม ฿0</div></div>
       <div class="card full"><button class="primary" onclick="startNew()">＋ เพิ่มหัตถการ</button></div>
     </div>
 
@@ -165,7 +166,7 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
         <button onclick="changeQty(5)">+5</button>
       </div>
 
-      <span class="fieldLabel">4. ราคา / ครั้ง</span>
+      <span class="fieldLabel">4. DF เต็ม / ครั้ง</span>
       <div class="stepBox">
         <button class="stepBtn" onclick="changePrice(-100)">−</button>
         <input id="unitPrice" class="stepValue" inputmode="decimal" type="number" min="0" value="0" oninput="recalc()">
@@ -179,7 +180,7 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
       </div>
 
       <div class="amountWrap">
-        <div><div class="label">ยอดรวม</div><div class="amount" id="calcTotal">฿0</div></div>
+        <div><div class="label">ยอดรับจริง</div><div class="amount" id="calcTotal">฿0</div></div>
         <div class="label" id="priceHint"></div>
       </div>
 
@@ -221,10 +222,11 @@ th{color:var(--muted);font-size:12px}.num{text-align:right}
         <button class="secondary" onclick="logoutCloud()">ออกจากระบบ</button>
       </div>
     </div>
-    <div class="top"><div><div class="title">Prices</div><div class="sub">ราคาตั้งต้นต่อหัตถการ</div></div></div>
+    <div class="top"><div><div class="title">Prices</div><div class="sub">DF เต็มต่อหัตถการ</div></div></div>
     <div class="card">
+      <p class="tiny" style="margin-top:0">ระบบคำนวณยอดรับจริงอัตโนมัติ: ปกส. 50% · ทั่วไป/ประกัน 80%</p>
       <table>
-        <thead><tr><th>หัตถการ</th><th class="num">ปกส.</th><th class="num">ทั่วไป</th></tr></thead>
+        <thead><tr><th>หัตถการ</th><th class="num">DF ปกส.</th><th class="num">DF ทั่วไป</th></tr></thead>
         <tbody id="priceTable"></tbody>
       </table>
       <div style="height:10px"></div>
@@ -277,6 +279,7 @@ const defaults={
   "I&D":{sss:300,private:450},
   "Intubation":{sss:500,private:700}
 };
+const PAYOUT_RATES=PayLogData.PAYOUT_RATES;
 
 function loadFirst(keys){
   for(const k of keys){
@@ -291,6 +294,11 @@ let entries=loadFirst([K_ENTRIES,...OLD_ENTRIES])||[];
 Object.keys(prices).forEach(name=>{
   if(typeof prices[name].active==='undefined') prices[name].active=true;
 });
+try{
+  const checked=PayLogData.validate({entries,prices});
+  entries=checked.entries;
+  prices=checked.prices;
+}catch(e){console.warn('ใช้ข้อมูลเดิมโดยยังไม่ normalize',e);}
 localStorage.setItem(K_PRICES,JSON.stringify(prices));
 localStorage.setItem(K_ENTRIES,JSON.stringify(entries));
 
@@ -300,6 +308,10 @@ let editingId=null;
 let pendingDeleteId=null;
 
 function money(n){return '฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:2})}
+function grossTotal(e){return Math.round(Number(e.total??e.qty*e.unit)*100)/100}
+function payRateFor(right){return PAYOUT_RATES[right]||0}
+function actualTotal(e){return Math.round(grossTotal(e)*payRateFor(e.right)*100)/100}
+function rateLabel(right){return `${Math.round(payRateFor(right)*100)}%`}
 function pad(n){return String(n).padStart(2,'0')}
 function toLocalInputValue(date){
   const d=new Date(date);
@@ -357,7 +369,7 @@ function renderProcedureGrid(){
     const current=rights==='sss'?p.sss:p.private;
     return `<button class="procBtn ${name===selectedProcedure?'active':''}" onclick="selectProcedure('${escJs(name)}')">
       <span class="procName">${esc(name)}</span>
-      <span class="procMeta">${rights==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${money(current)}</span>
+      <span class="procMeta">DF ${money(current)} · รับจริง ${money(current*payRateFor(rights))}</span>
     </button>`;
   }).join(''):'<div class="empty" style="grid-column:1/-1">ไม่พบหัตถการ</div>';
   renderRecentStrip();
@@ -400,8 +412,9 @@ function changePrice(delta){
 function recalc(){
   const qty=Math.max(1,Number(document.getElementById('qty').value||1));
   const unit=Math.max(0,Number(document.getElementById('unitPrice').value||0));
-  document.getElementById('calcTotal').textContent=money(qty*unit);
-  document.getElementById('priceHint').textContent=`${qty} × ${money(unit)}`;
+  const gross=qty*unit;
+  document.getElementById('calcTotal').textContent=money(gross*payRateFor(rights));
+  document.getElementById('priceHint').textContent=`DF เต็ม ${money(gross)} · รับ ${rateLabel(rights)}`;
 }
 
 function startNew(){
@@ -430,12 +443,14 @@ function saveEntry(){
   const raw=document.getElementById('entryDateTime').value;
   const dt=raw?new Date(raw):new Date();
   if(!Number.isInteger(qty)||qty<1||qty>1000000||!Number.isFinite(unit)||unit<0||unit>=1e10||Math.abs(unit*100-Math.round(unit*100))>0.0001||!Number.isFinite(dt.getTime())){alert("กรุณาตรวจจำนวน ราคา และวันที่");return;}
+  const total=Math.round(qty*unit*100)/100;
+  const payRate=payRateFor(rights);
   const obj={
     id:editingId||crypto.randomUUID(),
     ts:dt.toISOString(),
     procedure:selectedProcedure,
     right:rights,
-    qty,unit,total:qty*unit,
+    qty,unit,total,payRate,netTotal:Math.round(total*payRate*100)/100,
     note:document.getElementById('note').value.trim()
   };
   if(editingId){
@@ -470,7 +485,7 @@ function editEntry(id){
 function askDelete(id){
   const e=entries.find(x=>String(x.id)===String(id));if(!e)return;
   pendingDeleteId=id;
-  document.getElementById('deleteText').textContent=`${e.procedure} · ${e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${money(e.total)}`;
+  document.getElementById('deleteText').textContent=`${e.procedure} · ${e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · รับจริง ${money(actualTotal(e))} (DF ${money(grossTotal(e))})`;
   document.getElementById('confirmModal').classList.add('show');
 }
 function closeDeleteModal(){pendingDeleteId=null;document.getElementById('confirmModal').classList.remove('show')}
@@ -488,7 +503,7 @@ function entryHtml(e){
     <div class="historyTop">
       <div><div class="hmain">${esc(e.procedure)} × ${e.qty}</div>
       <div class="hsub">${e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน'} · ${d.toLocaleDateString('th-TH')} ${d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}${e.note?' · '+esc(e.note):''}</div></div>
-      <div class="hamt">${money(e.total)}</div>
+      <div class="hamt">${money(actualTotal(e))}<small>DF ${money(grossTotal(e))}</small></div>
     </div>
     <div class="actions"><button class="secondary" onclick="editEntry('${escJs(String(e.id))}')">แก้ไข</button><button class="danger" onclick="askDelete('${escJs(String(e.id))}')">ลบ</button></div>
   </div>`;
@@ -498,16 +513,21 @@ function renderDashboard(){
   const now=new Date(), todayKey=now.toDateString(), m=now.getMonth(), y=now.getFullYear();
   const today=entries.filter(e=>new Date(e.ts).toDateString()===todayKey);
   const month=entries.filter(e=>{const d=new Date(e.ts);return d.getMonth()===m&&d.getFullYear()===y});
-  document.getElementById('todayTotal').textContent=money(today.reduce((s,e)=>s+e.total,0));
-  document.getElementById('monthTotal').textContent=money(month.reduce((s,e)=>s+e.total,0));
-  document.getElementById('sssTotal').textContent=money(month.filter(e=>e.right==='sss').reduce((s,e)=>s+e.total,0));
-  document.getElementById('privateTotal').textContent=money(month.filter(e=>e.right==='private').reduce((s,e)=>s+e.total,0));
+  const sss=month.filter(e=>e.right==='sss'), privateRows=month.filter(e=>e.right==='private');
+  document.getElementById('todayTotal').textContent=money(today.reduce((s,e)=>s+actualTotal(e),0));
+  document.getElementById('todayGross').textContent=`DF เต็ม ${money(today.reduce((s,e)=>s+grossTotal(e),0))}`;
+  document.getElementById('monthTotal').textContent=money(month.reduce((s,e)=>s+actualTotal(e),0));
+  document.getElementById('monthGross').textContent=`DF เต็ม ${money(month.reduce((s,e)=>s+grossTotal(e),0))}`;
+  document.getElementById('sssTotal').textContent=money(sss.reduce((s,e)=>s+actualTotal(e),0));
+  document.getElementById('sssGross').textContent=`DF เต็ม ${money(sss.reduce((s,e)=>s+grossTotal(e),0))}`;
+  document.getElementById('privateTotal').textContent=money(privateRows.reduce((s,e)=>s+actualTotal(e),0));
+  document.getElementById('privateGross').textContent=`DF เต็ม ${money(privateRows.reduce((s,e)=>s+grossTotal(e),0))}`;
 
   const sum={};
-  month.forEach(e=>{if(!sum[e.procedure])sum[e.procedure]={n:0,total:0};sum[e.procedure].n+=e.qty;sum[e.procedure].total+=e.total});
-  const arr=Object.entries(sum).sort((a,b)=>b[1].total-a[1].total);
+  month.forEach(e=>{if(!sum[e.procedure])sum[e.procedure]={n:0,gross:0,actual:0};sum[e.procedure].n+=e.qty;sum[e.procedure].gross+=grossTotal(e);sum[e.procedure].actual+=actualTotal(e)});
+  const arr=Object.entries(sum).sort((a,b)=>b[1].actual-a[1].actual);
   document.getElementById('procedureSummary').innerHTML=arr.length?arr.map(([name,v])=>`
-    <div class="summary"><div><strong>${esc(name)}</strong><small>${v.n} ครั้ง</small></div><strong>${money(v.total)}</strong></div>`).join(''):'<div class="empty">ยังไม่มีข้อมูลเดือนนี้</div>';
+    <div class="summary"><div><strong>${esc(name)}</strong><small>${v.n} ครั้ง · DF ${money(v.gross)}</small></div><strong>${money(v.actual)}</strong></div>`).join(''):'<div class="empty">ยังไม่มีข้อมูลเดือนนี้</div>';
   document.getElementById('recentList').innerHTML=entries.length?entries.slice(0,5).map(entryHtml).join(''):'<div class="empty">ยังไม่มีข้อมูล</div>';
 }
 
@@ -622,9 +642,9 @@ function deleteProcedure(name){
 }
 
 function exportCSV(){
-  const header=['วันที่เวลา','สิทธิ์','หัตถการ','จำนวน','ราคาต่อครั้ง','รวม','หมายเหตุ'];
+  const header=['วันที่เวลา','สิทธิ์','หัตถการ','จำนวน','DF ต่อครั้ง','DF เต็ม','อัตราจ่าย','ยอดรับจริง','หมายเหตุ'];
   const rows=entries.slice().sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(e=>[
-    new Date(e.ts).toLocaleString('th-TH'),e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน',e.procedure,e.qty,e.unit,e.total,e.note||''
+    new Date(e.ts).toLocaleString('th-TH'),e.right==='sss'?'ปกส.':'ทั่วไป/ประกัน',e.procedure,e.qty,e.unit,grossTotal(e),rateLabel(e.right),actualTotal(e),e.note||''
   ]);
   const q=v=>`"${String(v).replace(/"/g,'""')}"`;
   const csv='\uFEFF'+[header,...rows].map(r=>r.map(q).join(',')).join('\r\n');
@@ -643,7 +663,7 @@ recalc();renderDashboard();
 function exportBackup(){
   const payload={
     app:'Procedure Pay Log',
-    version:'1.0',
+    version:'1.1',
     exportedAt:new Date().toISOString(),
     entries,
     prices

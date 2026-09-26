@@ -1,4 +1,6 @@
-# Procedure Pay Log v1.0 — database integration
+# Procedure Pay Log v1.1 — database integration
+
+Payment reporting keeps the full procedure DF and calculates the amount actually received using fixed coverage rates: `sss` (ปกส.) = 50% and `private` (ทั่วไป/ประกัน) = 80%. Existing entries are normalized with the same rates. Dashboard totals, history and CSV exports show actual payment while retaining full DF for reconciliation.
 
 Prepared from `polarism4/procedure-pay-log` main (original index blob `97eac20093d85fc865562b84e5b2c2e552c598e4`). Keeps the existing mobile layout, quick-entry workflow, `sss` = ปกส. and `private` = ทั่วไป/ประกัน, history, procedure management, CSV, and JSON backups.
 
@@ -42,7 +44,7 @@ Authenticated users can read only their own rows. Anonymous users have no table 
 
 ## Validation
 
-Run `node --test tests/*.cjs` and `node build.cjs` (no install needed). Eight automated tests cover legacy conversion, both coverages, invalid/duplicate imports, historical names, hidden procedures, stale revisions, offline failures, account cache isolation and changes made during an in-flight save. JavaScript syntax and an unconfigured build were checked.
+Run `node --test tests/*.cjs` and `node build.cjs` (no install needed). Automated tests cover legacy conversion, both coverages, 50%/80% payment calculation, invalid/duplicate imports, historical names, hidden procedures, stale revisions, offline failures, account cache isolation and changes made during an in-flight save. JavaScript syntax and an unconfigured build were checked.
 
 Live database execution, actual login, Cloudflare deployment and mobile Safari visual testing have not been performed: no Supabase project credentials or deployment target were supplied. Before production:
 
