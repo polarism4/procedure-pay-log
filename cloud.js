@@ -76,6 +76,27 @@ async function loginCloud(event){
     if(next.dirty)queueMicrotask(syncCloud);
   }catch(e){cloudStatus('เข้าสู่ระบบไม่สำเร็จ · '+e.message);}finally{busy=false;}
 }
+async function restoreCloudLogin(){
+  const {data,error}=await cloud.auth.getSession();if(error)throw error;
+  const user=data.session?.user;if(!user)return false;
+  const owner=user.id;
+  const cachedRaw=localStorage.getItem(`proc_cloud_v1_${owner}`);
+  let next;
+  if(cachedRaw){
+    const cached=JSON.parse(cachedRaw);PayLogData.validate(cached);next=cached;
+  }else{
+    const result=await cloud.rpc('load_pay_log');if(result.error)throw result.error;
+    next={...PayLogData.validate(result.data),revision:Number(result.data.revision),dirty:false};
+    localStorage.setItem(`proc_cloud_v1_${owner}`,JSON.stringify(next));
+  }
+  account=owner;cloudState=next;applyData(next);
+  document.getElementById('cloudActions').hidden=false;
+  document.getElementById('cloudLogin').hidden=true;
+  cloudStatus(next.dirty?'กลับเข้าสู่บัญชีแล้ว · มีข้อมูลในเครื่องรอซิงก์':'เข้าสู่ระบบอัตโนมัติแล้ว · '+user.email);
+  if(next.dirty)queueMicrotask(syncCloud);
+  return true;
+}
+
 async function logoutCloud(){
   if(busy||syncing)return;
   if(cloudState?.dirty){cloudStatus('กรุณาซิงก์หรือ Backup ข้อมูลที่ค้างก่อนออกจากระบบ');return;}
@@ -110,8 +131,11 @@ function migrateLocal(){
   if(!config?.url||!config?.publishableKey){cloudStatus('โหมดในเครื่อง · ยังไม่ได้ตั้งค่า Cloud');return;}
   try{
     const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2.102.0');
-    cloud=createClient(config.url,config.publishableKey,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:false}});
-    cloudStatus('Cloud พร้อม · เข้าสู่ระบบเพื่อเปิดข้อมูลบัญชี');
+    cloud=createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.localStorage}});
+    busy=true;
+    try{
+      if(!await restoreCloudLogin())cloudStatus('Cloud พร้อม · เข้าสู่ระบบเพื่อเปิดข้อมูลบัญชี');
+    }finally{busy=false;}
   }catch(e){cloudStatus('เชื่อมต่อ Cloud ไม่ได้ · ยังใช้ข้อมูลในเครื่องได้');}
 })();
 window.addEventListener('online',()=>syncCloud());
