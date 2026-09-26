@@ -14,10 +14,14 @@ test('normalizes legacy numeric ids/timestamps and preserves both coverage types
   assert.equal(out.entries[0].ts,'2026-09-18T18:02:03.000Z');
   assert.deepEqual(out.entries.map(e=>e.right),['sss','private']);
   assert.equal(out.entries[1].total,600);
+  assert.deepEqual(out.entries.map(e=>e.payRate),[0.5,0.8]);
+  assert.deepEqual(out.entries.map(e=>e.netTotal),[200,480]);
 });
 
 test('rejects mismatched financial totals',()=>{
   assert.throws(()=>validate({prices,entries:[{...base,total:399}]}),/ยอดรวมเดิม/);
+  assert.throws(()=>validate({prices,entries:[{...base,payRate:0.8}]}),/อัตราจ่ายเดิม/);
+  assert.throws(()=>validate({prices,entries:[{...base,netTotal:399}]}),/ยอดรับจริงเดิม/);
 });
 
 test('rejects duplicate or malformed entries',()=>{
